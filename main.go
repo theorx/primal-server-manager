@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"primal-server-manager/pkg/Scheduler"
+	"time"
 )
 
 func main() {
@@ -21,8 +22,8 @@ func main() {
 	r := Scheduler.NewScheduler()
 
 	r.Register(Scheduler.WipeRule{
-		Name:                    "",
-		Days:                    nil,
+		Name:                    "Example rule",
+		Days:                    []time.Weekday{time.Monday},
 		Hour:                    0,
 		Minute:                  0,
 		FullWipe:                false,
@@ -32,6 +33,13 @@ func main() {
 		MinDaysSinceLastTrigger: 0,
 	})
 
+	for _, t := range r.Schedule(0) {
+		log.Println("Trigger:", t)
+	}
+
 	//use sqlite to store the log?
+
+
+
 
 }

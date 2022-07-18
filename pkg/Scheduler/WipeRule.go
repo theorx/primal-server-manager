@@ -6,7 +6,7 @@ import "time"
 //Let's say wipe every monday after 3 weeks?
 type WipeRule struct {
 	Name           string
-	Days           []int
+	Days           []time.Weekday
 	Hour           int   //Value between 0-24
 	Minute         int   //Value between 0-59
 	FullWipe       bool  //False = Map wipe
@@ -25,6 +25,17 @@ timestamp - lastApplied has to be greater than MinDaysSinceLastTrigger is, other
 Also, if the MinDaysSinceLastTrigger is equal to 0, then lastApplied is totally ignored, but still updated.
 */
 func (w *WipeRule) apply(timestamp int64, lastApplied int64) bool {
+
+	//Determine whether the rule is active. If the EndTimestamp is 0, then the rule never expires
+	if w.StartTimestamp < timestamp || (w.EndTimestamp != 0 && w.EndTimestamp > timestamp) {
+		return false
+	}
+
+	//First determine if lastApplied + minDaysSinceLastTrigger * 86400 is greater than timestamp
+	//if so, then return false
+	if lastApplied+(int64(w.MinDaysSinceLastTrigger)*int64(time.Hour)*24) >= timestamp {
+		return false
+	}
 
 	t := time.Unix(timestamp, 0)
 

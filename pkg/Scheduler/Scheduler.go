@@ -4,7 +4,7 @@ package Scheduler
 Scheduler holds all the wipe rules
 */
 type Scheduler struct {
-	Rules []WipeRule
+	rules []WipeRule
 	//Todo: TriggerTimes need to be persisted as well
 	triggerTimes map[string]int64
 	triggerLog   *TriggerLog
@@ -15,7 +15,7 @@ NewScheduler Constructor for SchedulerRegistry
 */
 func NewScheduler() *Scheduler {
 	return &Scheduler{
-		Rules:        make([]WipeRule, 0),
+		rules:        make([]WipeRule, 0),
 		triggerTimes: make(map[string]int64),
 		triggerLog:   &TriggerLog{},
 	}
@@ -27,13 +27,22 @@ Schedule This schedule function will need to be called once per minute, as the g
 func (s *Scheduler) Schedule(input int64) []*WipeTrigger {
 	triggers := make([]*WipeTrigger, 0)
 
-	for _, rule := range s.Rules {
+	for _, rule := range s.rules {
 		if trigger := s.tryApply(&rule, input); trigger != nil {
 			triggers = append(triggers, trigger)
 		}
 	}
 
 	return triggers
+}
+
+/*
+NextTrigger predicts the timestamp for the next future trigger for a given rule
+Input is the int64 unix timestamp of the current time
+*/
+func (s *Scheduler) NextTrigger(input int64, rule *WipeRule) int64 {
+
+	return 0
 }
 
 /**
@@ -65,9 +74,37 @@ func (s *Scheduler) tryApply(wr *WipeRule, timestamp int64) *WipeTrigger {
 
 }
 
+/*
+getTriggerTime is called to determine when the specific trigger was triggered successfully
+*/
+func (s *Scheduler) getTriggerTime(name string) int64 {
+	if _, ok := s.triggerTimes[name]; !ok {
+		s.triggerTimes[name] = 0
+	}
+
+	return s.triggerTimes[name]
+}
+
+/*
+Updates triggered time
+*/
+func (s *Scheduler) updateTriggerTime(name string, value int64) {
+	s.triggerTimes[name] = value
+}
+
+/*
+Registers new rule, has to be persisted TODO: Design persistence layer separately from scheduler?
+*/
 func (s *Scheduler) Register(rule WipeRule) error {
 	//Check whether the name is unique?
-	s.Rules = append(s.Rules, rule)
+	s.rules = append(s.rules, rule)
 
 	return nil
+}
+
+/*
+Returns the rules loaded to memory
+*/
+func (s *Scheduler) Rules() []WipeRule {
+	return s.rules
 }
