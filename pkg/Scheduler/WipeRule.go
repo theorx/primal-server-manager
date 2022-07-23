@@ -2,8 +2,6 @@ package Scheduler
 
 import "time"
 
-//How would you define interval of 2 weeks or 3 weeks?
-//Let's say wipe every monday after 3 weeks?
 type WipeRule struct {
 	Name           string
 	Days           []time.Weekday
@@ -27,7 +25,7 @@ Also, if the MinDaysSinceLastTrigger is equal to 0, then lastApplied is totally 
 func (w *WipeRule) apply(timestamp int64, lastApplied int64) bool {
 
 	//Determine whether the rule is active. If the EndTimestamp is 0, then the rule never expires
-	if w.StartTimestamp < timestamp || (w.EndTimestamp != 0 && w.EndTimestamp > timestamp) {
+	if w.StartTimestamp >= timestamp || (w.EndTimestamp != 0 && w.EndTimestamp <= timestamp) {
 		return false
 	}
 

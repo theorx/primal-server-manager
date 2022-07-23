@@ -36,3 +36,5 @@ func TestRegisterRegistersRules(t *testing.T) {
 		t.Errorf("Output %v not equal to %v", got, input)
 	}
 }
+
+
