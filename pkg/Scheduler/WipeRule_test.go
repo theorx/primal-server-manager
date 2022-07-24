@@ -99,3 +99,34 @@ func TestWipeRuleApplyMatchesDays(t *testing.T) {
 		}
 	}
 }
+
+func TestWipeRuleMatchHourAndMinute(t *testing.T) {
+	tt := []struct {
+		Hour   int
+		Minute int
+		Result bool
+	}{
+		{Hour: 0, Minute: 0, Result: true},
+		{Hour: 24, Minute: 0, Result: false},
+		{Hour: 1, Minute: 1, Result: true},
+		{Hour: 12, Minute: 0, Result: true},
+		{Hour: 23, Minute: 59, Result: true},
+		{Hour: 25, Minute: 159, Result: false},
+		{Hour: 13, Minute: 30, Result: true},
+		{Hour: 12, Minute: 00, Result: true},
+		{Hour: 11, Minute: 59, Result: true},
+		{Hour: 11, Minute: 60, Result: false},
+		{Hour: -22, Minute: 60, Result: false},
+	}
+
+	for _, c := range tt {
+		if (&WipeRule{
+			Hour:   c.Hour,
+			Minute: c.Minute,
+		}).matchHourAndMinute(
+			time.Date(2000, 1, 1, c.Hour, c.Minute, 0, 0, time.Local).Unix(),
+		) != c.Result {
+			t.Errorf("matchHourAndMinute failed with input: H: %d M: %d", c.Hour, c.Minute)
+		}
+	}
+}
