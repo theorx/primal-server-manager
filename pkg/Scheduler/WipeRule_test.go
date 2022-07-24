@@ -21,7 +21,6 @@ func TestWipeRuleApplyInActiveTimeRange(t *testing.T) {
 	}
 
 	for _, c := range tt {
-		//All the cases are expected to return false, otherwise fail
 		if (&WipeRule{StartTimestamp: c.Start, EndTimestamp: c.End}).apply(c.Timestamp, 0) {
 			t.Errorf("Expected apply() to return false, got true. StartTimestamp: %d, Timestamp: %d", c.Start, c.Timestamp)
 		}
@@ -37,29 +36,11 @@ func TestWipeRuleLastAppliedMinDaysSinceLastTriggerRules(t *testing.T) {
 		Timestamp               int64
 		LastApplied             int64
 	}{
-		{
-			Timestamp:   100,
-			LastApplied: 2134,
-		},
-		{
-			Timestamp:   100,
-			LastApplied: 100,
-		},
-		{
-			MinDaysSinceLastTrigger: 1,
-			Timestamp:               100,
-			LastApplied:             0,
-		},
-		{
-			MinDaysSinceLastTrigger: 1,
-			Timestamp:               day,
-			LastApplied:             0,
-		},
-		{
-			MinDaysSinceLastTrigger: 1,
-			Timestamp:               day * 2,
-			LastApplied:             day,
-		},
+		{Timestamp: 100, LastApplied: 2134},
+		{Timestamp: 100, LastApplied: 100},
+		{MinDaysSinceLastTrigger: 1, Timestamp: 100, LastApplied: 0},
+		{MinDaysSinceLastTrigger: 1, Timestamp: day, LastApplied: 0},
+		{MinDaysSinceLastTrigger: 1, Timestamp: day * 2, LastApplied: day},
 	}
 
 	for _, c := range tt {
@@ -127,6 +108,41 @@ func TestWipeRuleMatchHourAndMinute(t *testing.T) {
 			time.Date(2000, 1, 1, c.Hour, c.Minute, 0, 0, time.Local).Unix(),
 		) != c.Result {
 			t.Errorf("matchHourAndMinute failed with input: H: %d M: %d", c.Hour, c.Minute)
+		}
+	}
+}
+
+func TestWipeRuleIsForcedWipe(t *testing.T) {
+	tt := []struct {
+		Month  int
+		Day    int
+		Result bool
+	}{
+		{Month: 7, Day: 1, Result: false},
+		{Month: 7, Day: 6, Result: false},
+		{Month: 7, Day: 7, Result: true},
+		{Month: 7, Day: 8, Result: false},
+		{Month: 7, Day: 14, Result: false},
+		{Month: 7, Day: 7, Result: true},
+		{Month: 8, Day: 2, Result: false},
+		{Month: 1, Day: 1, Result: false},
+		{Month: 1, Day: 2, Result: false},
+		{Month: 1, Day: 3, Result: false},
+		{Month: 1, Day: 4, Result: false},
+		{Month: 1, Day: 5, Result: false},
+		{Month: 1, Day: 6, Result: true},
+		{Month: 1, Day: 7, Result: false},
+		{Month: 1, Day: 8, Result: false},
+		{Month: 1, Day: 8, Result: false},
+		{Month: 6, Day: 2, Result: true},
+		{Month: 6, Day: 9, Result: false},
+		{Month: 6, Day: 16, Result: false},
+		{Month: 6, Day: 23, Result: false},
+	}
+
+	for _, c := range tt {
+		if got := (&WipeRule{}).isForcedUpdate(time.Date(2022, time.Month(c.Month), c.Day, 12, 0, 0, 0, time.Local).Unix()); got != c.Result {
+			t.Errorf("isForcedWipe() failed, expected: %v, got: %v, case: %v", c.Result, got, c)
 		}
 	}
 }

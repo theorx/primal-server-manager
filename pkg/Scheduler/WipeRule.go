@@ -78,8 +78,15 @@ func (w *WipeRule) matchHourAndMinute(timestamp int64) bool {
 	return false
 }
 
+/**
+isForcedUpdate checks whether it's the first thursday of the month as per Facepunch's update policy
+*/
 func (w *WipeRule) isForcedUpdate(timestamp int64) bool {
-	//Determine whether this is the first thursday of the month
+	t := time.Unix(timestamp, 0)
 
-	return true
+	if t.Weekday() == time.Thursday && t.Day() <= 7 {
+		return true
+	}
+
+	return false
 }
