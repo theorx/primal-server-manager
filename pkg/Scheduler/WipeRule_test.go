@@ -1,6 +1,9 @@
 package Scheduler
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestWipeRuleApplyInActiveTimeRange(t *testing.T) {
 	tt := []struct {
@@ -62,6 +65,37 @@ func TestWipeRuleLastAppliedMinDaysSinceLastTriggerRules(t *testing.T) {
 	for _, c := range tt {
 		if (&WipeRule{StartTimestamp: startTime, MinDaysSinceLastTrigger: c.MinDaysSinceLastTrigger}).apply(c.Timestamp, c.LastApplied) {
 			t.Errorf("Expected apply() to return false when timestamp is less than lastApplied + minDaysSinceLastTrigger in seconds")
+		}
+	}
+}
+
+func TestWipeRuleApplyMatchesDays(t *testing.T) {
+	instance := &WipeRule{}
+
+	tt := []struct {
+		Days      []time.Weekday
+		Timestamp int64
+		Result    bool
+	}{
+		{Days: nil, Timestamp: 0, Result: false},
+		{Days: []time.Weekday{}, Timestamp: 0, Result: false},
+		{Days: []time.Weekday{time.Sunday}, Timestamp: 1658674601, Result: true},
+		{Days: []time.Weekday{time.Monday}, Timestamp: 1658761001, Result: true},
+		{Days: []time.Weekday{time.Tuesday}, Timestamp: 1658847401, Result: true},
+		{Days: []time.Weekday{time.Wednesday}, Timestamp: 1658933801, Result: true},
+		{Days: []time.Weekday{time.Thursday}, Timestamp: 1659020201, Result: true},
+		{Days: []time.Weekday{time.Friday}, Timestamp: 1659106601, Result: true},
+		{Days: []time.Weekday{time.Saturday}, Timestamp: 1659193001, Result: true},
+		{Days: []time.Weekday{time.Friday}, Timestamp: 1659193001, Result: false},
+		{Days: []time.Weekday{time.Sunday}, Timestamp: 1661093801, Result: true},
+		{Days: []time.Weekday{time.Sunday, time.Monday, time.Tuesday, time.Wednesday, time.Thursday, time.Friday, time.Saturday}, Timestamp: 4, Result: true},
+		{Days: []time.Weekday{time.Sunday, time.Monday, time.Tuesday, time.Thursday, time.Friday, time.Saturday}, Timestamp: 1661353001, Result: false},
+	}
+
+	for _, c := range tt {
+		instance.Days = c.Days
+		if got := instance.matchWeekday(c.Timestamp); got != c.Result {
+			t.Errorf("WipeRule.matchWeekday failed, expected: %v, Got: %v", c.Result, got)
 		}
 	}
 }

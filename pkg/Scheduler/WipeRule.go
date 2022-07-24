@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+const ForceWipeHourUtc = 18 //18:00 UTC rust force wipe
+
 type WipeRule struct {
 	Name           string
 	Days           []time.Weekday
@@ -15,7 +17,6 @@ type WipeRule struct {
 	EndTimestamp   int64 //To make sure, that the wipeRule can also expire. 0 = it will never expire
 	//MinDaysSinceLastTrigger can be used to implement rules with longer than 1 week frequency
 	//For example if Days only has [1] = Monday, and MinDaysSinceLastTrigger = 13, then
-	//it should trigger every 2 weeks. TODO: Create unit tests for that as well
 	MinDaysSinceLastTrigger int //Minimum number of days since last trigger.
 }
 
@@ -30,21 +31,51 @@ func (w *WipeRule) apply(timestamp int64, lastApplied int64) bool {
 		return false
 	}
 
-	//First determine if lastApplied + minDaysSinceLastTrigger * 86400 is greater than timestamp
-	//if so, then return false
 	if lastApplied+(int64(w.MinDaysSinceLastTrigger)*86400) >= timestamp {
 		return false
 	}
 
+	if w.WipeOnForced && w.isForcedUpdate(timestamp) {
+		if time.Unix(timestamp, 0).Hour() == ForceWipeHourUtc && time.Unix(timestamp, 0).Minute() == 0 {
+			return true
+		}
+		return false
+	}
+
+	if !w.matchWeekday(timestamp) {
+		return false
+	}
+
+	return w.matchHourAndMinute(timestamp)
+}
+
+/*
+matchWeekday matches the weekday of the given timestamp based on the days configured for the rule
+If the currentDay is not present within the rule, false is returned.
+*/
+func (w *WipeRule) matchWeekday(timestamp int64) bool {
+
+	currentDay := time.Unix(timestamp, 0).Weekday()
+	for _, day := range w.Days {
+		if currentDay == day {
+			return true
+		}
+	}
+
+	return false
+}
+
+/**
+matchHourAndMinute
+*/
+func (w *WipeRule) matchHourAndMinute(timestamp int64) bool {
 	t := time.Unix(timestamp, 0)
 
-	t.Day()
+	if t.Hour() == w.Hour && t.Minute() == t.Minute() {
+		return true
+	}
 
-	//Get day number from timestamp
-	//Fetch hour from timestamp
-	//Fetch minute from
-
-	return true
+	return false
 }
 
 func (w *WipeRule) isForcedUpdate(timestamp int64) bool {
