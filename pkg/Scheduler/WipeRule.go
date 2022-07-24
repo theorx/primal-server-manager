@@ -7,17 +7,16 @@ import (
 const ForceWipeHourUtc = 18 //18:00 UTC rust force wipe
 
 type WipeRule struct {
-	Name           string
-	Days           []time.Weekday
-	Hour           int   //Value between 0-24
-	Minute         int   //Value between 0-59
-	FullWipe       bool  //False = Map wipe
-	WipeOnForced   bool  //If WipeOnForced = true, then the rule does not apply at all, and is only triggered when force wipe is detected on that day
-	StartTimestamp int64 //Rule is only applied if the startTimestamp is > current unix time
-	EndTimestamp   int64 //To make sure, that the wipeRule can also expire. 0 = it will never expire
-	//MinDaysSinceLastTrigger can be used to implement rules with longer than 1 week frequency
-	//For example if Days only has [1] = Monday, and MinDaysSinceLastTrigger = 13, then
-	MinDaysSinceLastTrigger int //Minimum number of days since last trigger.
+	Name                    string
+	Server                  string //Uuidv4 of server?
+	Days                    []time.Weekday
+	Hour                    int
+	Minute                  int
+	FullWipe                bool
+	WipeOnForced            bool //If WipeOnForced = true, then the rule does not apply at all, and is only triggered when force wipe is detected on that day
+	StartTimestamp          int64
+	EndTimestamp            int64
+	MinDaysSinceLastTrigger int
 }
 
 /**
@@ -71,7 +70,7 @@ matchHourAndMinute
 func (w *WipeRule) matchHourAndMinute(timestamp int64) bool {
 	t := time.Unix(timestamp, 0)
 
-	if t.Hour() == w.Hour && t.Minute() == t.Minute() {
+	if t.Hour() == w.Hour && t.Minute() == w.Minute {
 		return true
 	}
 

@@ -28,7 +28,6 @@ func TestWipeRuleApplyInActiveTimeRange(t *testing.T) {
 }
 
 func TestWipeRuleLastAppliedMinDaysSinceLastTriggerRules(t *testing.T) {
-	startTime := int64(1)
 	const day = 86400
 
 	tt := []struct {
@@ -44,7 +43,7 @@ func TestWipeRuleLastAppliedMinDaysSinceLastTriggerRules(t *testing.T) {
 	}
 
 	for _, c := range tt {
-		if (&WipeRule{StartTimestamp: startTime, MinDaysSinceLastTrigger: c.MinDaysSinceLastTrigger}).apply(c.Timestamp, c.LastApplied) {
+		if (&WipeRule{StartTimestamp: 1, MinDaysSinceLastTrigger: c.MinDaysSinceLastTrigger}).apply(c.Timestamp, c.LastApplied) {
 			t.Errorf("Expected apply() to return false when timestamp is less than lastApplied + minDaysSinceLastTrigger in seconds")
 		}
 	}
@@ -143,6 +142,73 @@ func TestWipeRuleIsForcedWipe(t *testing.T) {
 	for _, c := range tt {
 		if got := (&WipeRule{}).isForcedUpdate(time.Date(2022, time.Month(c.Month), c.Day, 12, 0, 0, 0, time.Local).Unix()); got != c.Result {
 			t.Errorf("isForcedWipe() failed, expected: %v, got: %v, case: %v", c.Result, got, c)
+		}
+	}
+}
+
+func TestWipeRuleApplyHandlesForcedUpdateOnTime(t *testing.T) {
+
+	tt := []struct {
+		Timestamp int64
+		Result    bool
+	}{
+		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc, 0, 0, 0, time.Local).Unix(), Result: true},
+		{Timestamp: time.Date(2022, 6, 2, ForceWipeHourUtc, 0, 0, 0, time.Local).Unix(), Result: true},
+		{Timestamp: time.Date(2022, 6, 2, 14, 0, 0, 0, time.Local).Unix(), Result: false},
+		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc, 1, 0, 0, time.Local).Unix(), Result: false},
+		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc-1, 59, 0, 0, time.Local).Unix(), Result: false},
+	}
+
+	for _, c := range tt {
+		if (&WipeRule{
+			WipeOnForced: true,
+		}).apply(c.Timestamp, 0) != c.Result {
+			t.Errorf("WipeRule.apply failed handling forced update, case: %v", c)
+		}
+	}
+}
+
+func TestWipeRuleApplyHandlesMatchWeekDay(t *testing.T) {
+	tt := []struct {
+		Days      []time.Weekday
+		Timestamp int64
+		Result    bool
+	}{
+		{
+			Days:      []time.Weekday{time.Monday},
+			Timestamp: time.Date(2022, 7, 25, 0, 0, 0, 0, time.Local).Unix(),
+			Result:    true,
+		},
+		{
+			Days:      []time.Weekday{time.Tuesday},
+			Timestamp: time.Date(2022, 7, 26, 0, 0, 0, 0, time.Local).Unix(),
+			Result:    true,
+		},
+		{
+			Days:      []time.Weekday{time.Tuesday},
+			Timestamp: time.Date(2022, 7, 26, 0, 45, 0, 0, time.Local).Unix(),
+			Result:    false,
+		},
+		{
+			Days:      []time.Weekday{time.Tuesday},
+			Timestamp: time.Date(2022, 7, 26, 2, 0, 0, 0, time.Local).Unix(),
+			Result:    false,
+		},
+		{
+			Days:      []time.Weekday{time.Wednesday},
+			Timestamp: time.Date(2022, 7, 26, 0, 0, 0, 0, time.Local).Unix(),
+			Result:    false,
+		},
+		{
+			Days:      []time.Weekday{},
+			Timestamp: time.Date(2022, 7, 4, 0, 0, 0, 0, time.Local).Unix(),
+			Result:    false,
+		},
+	}
+
+	for _, c := range tt {
+		if (&WipeRule{Days: c.Days, WipeOnForced: false}).apply(c.Timestamp, 0) != c.Result {
+			t.Errorf("WipeRule.apply() failed to handle matchWeekday(), case: %v", c)
 		}
 	}
 }
