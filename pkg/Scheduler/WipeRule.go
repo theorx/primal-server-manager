@@ -1,6 +1,8 @@
 package Scheduler
 
-import "time"
+import (
+	"time"
+)
 
 type WipeRule struct {
 	Name           string
@@ -23,7 +25,6 @@ timestamp - lastApplied has to be greater than MinDaysSinceLastTrigger is, other
 Also, if the MinDaysSinceLastTrigger is equal to 0, then lastApplied is totally ignored, but still updated.
 */
 func (w *WipeRule) apply(timestamp int64, lastApplied int64) bool {
-
 	//Determine whether the rule is active. If the EndTimestamp is 0, then the rule never expires
 	if w.StartTimestamp >= timestamp || (w.EndTimestamp != 0 && w.EndTimestamp <= timestamp) {
 		return false
@@ -31,7 +32,7 @@ func (w *WipeRule) apply(timestamp int64, lastApplied int64) bool {
 
 	//First determine if lastApplied + minDaysSinceLastTrigger * 86400 is greater than timestamp
 	//if so, then return false
-	if lastApplied+(int64(w.MinDaysSinceLastTrigger)*int64(time.Hour)*24) >= timestamp {
+	if lastApplied+(int64(w.MinDaysSinceLastTrigger)*86400) >= timestamp {
 		return false
 	}
 
