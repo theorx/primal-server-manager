@@ -4,20 +4,19 @@ package Scheduler
 Scheduler holds all the wipe rules
 */
 type Scheduler struct {
-	rules []WipeRule
-	//Todo: TriggerTimes need to be persisted as well
-	triggerTimes map[string]int64
-	triggerLog   *TriggerLog
+	registry    RuleRegistryDAO
+	triggerTime TriggerTimeDAO
+	triggerLog  TriggerLogDAO
 }
 
 /*
 NewScheduler Constructor for SchedulerRegistry
 */
-func NewScheduler() *Scheduler {
+func NewScheduler(triggerTime TriggerTimeDAO, triggerLog TriggerLogDAO, registry RuleRegistryDAO) *Scheduler {
 	return &Scheduler{
-		rules:        make([]WipeRule, 0),
-		triggerTimes: make(map[string]int64),
-		triggerLog:   &TriggerLog{},
+		registry:    registry,
+		triggerTime: triggerTime,
+		triggerLog:  triggerLog,
 	}
 }
 
@@ -27,7 +26,7 @@ Schedule This schedule function will need to be called once per minute, as the g
 func (s *Scheduler) Schedule(input int64) []*WipeTrigger {
 	triggers := make([]*WipeTrigger, 0)
 
-	for _, rule := range s.rules {
+	for _, rule := range s.registry.List() {
 		if trigger := s.tryApply(&rule, input); trigger != nil {
 			triggers = append(triggers, trigger)
 		}
@@ -53,11 +52,7 @@ func (s *Scheduler) tryApply(wr *WipeRule, timestamp int64) *WipeTrigger {
 		return nil
 	}
 
-	if _, ok := s.triggerTimes[wr.Name]; !ok {
-		s.triggerTimes[wr.Name] = 0
-	}
-
-	if !wr.apply(timestamp, s.triggerTimes[wr.Name]) {
+	if !wr.apply(timestamp, s.triggerTime.Get(wr.Name)) {
 		return nil
 	}
 
@@ -66,49 +61,42 @@ func (s *Scheduler) tryApply(wr *WipeRule, timestamp int64) *WipeTrigger {
 		Name:        wr.Name,
 		Timestamp:   timestamp,
 		FullWipe:    wr.FullWipe,
-		LastTrigger: s.triggerTimes[wr.Name],
+		LastTrigger: s.triggerTime.Get(wr.Name),
 	}
 
 	//update timestamp
-	s.triggerTimes[wr.Name] = timestamp
-
+	s.triggerTime.Update(wr.Name, timestamp)
 	s.triggerLog.Log(trigger)
 
 	return trigger
 
 }
 
-/*
-getTriggerTime is called to determine when the specific trigger was triggered successfully
-*/
-func (s *Scheduler) getTriggerTime(name string) int64 {
-	if _, ok := s.triggerTimes[name]; !ok {
-		s.triggerTimes[name] = 0
-	}
-
-	return s.triggerTimes[name]
-}
-
-/*
-Updates triggered time
-*/
-func (s *Scheduler) updateTriggerTime(name string, value int64) {
-	s.triggerTimes[name] = value
-}
-
-/*
-Registers new rule, has to be persisted TODO: Design persistence layer separately from scheduler?
-*/
 func (s *Scheduler) Register(rule WipeRule) error {
-	//Check whether the name is unique?
-	s.rules = append(s.rules, rule)
 
-	return nil
+	return s.registry.Insert(rule)
 }
 
-/*
-Returns the rules loaded to memory
-*/
 func (s *Scheduler) Rules() []WipeRule {
-	return s.rules
+	return s.registry.List()
+}
+
+type TriggerTimeDAO interface {
+	Store(map[string]int64) error
+	Load() (map[string]int64, error)
+	Get(string) int64
+	Update(string, int64)
+}
+
+type TriggerLogDAO interface {
+	Log(trigger *WipeTrigger)
+	Get(start int64, end int64, limit int64) []*WipeTrigger
+}
+
+type RuleRegistryDAO interface {
+	Store([]WipeRule) error
+	Load() ([]WipeRule, error)
+	Update(WipeRule) error
+	Insert(WipeRule) error
+	List() []WipeRule
 }

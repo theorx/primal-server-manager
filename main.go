@@ -19,7 +19,7 @@ func main() {
 	//Plugins are c# sources that can have files associated with them
 	// 		- The file associations are of two kind:
 
-	r := Scheduler.NewScheduler()
+	r := Scheduler.NewScheduler(nil, nil, nil)
 
 	r.Register(Scheduler.WipeRule{
 		Name:                    "Example rule",
@@ -38,8 +38,5 @@ func main() {
 	}
 
 	//use sqlite to store the log?
-
-
-
 
 }

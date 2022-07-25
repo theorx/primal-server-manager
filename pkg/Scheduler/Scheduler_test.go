@@ -9,10 +9,76 @@ import (
 
 var fullWeek = []time.Weekday{time.Monday, time.Tuesday, time.Wednesday, time.Thursday, time.Friday, time.Saturday, time.Sunday}
 
+type triggerTimeMemory struct {
+	data map[string]int64
+}
+
+func (t *triggerTimeMemory) Store(m map[string]int64) error {
+	panic("implement me")
+}
+
+func (t *triggerTimeMemory) Load() (map[string]int64, error) {
+	panic("implement me")
+}
+
+func (t *triggerTimeMemory) Get(s string) int64 {
+	if _, ok := t.data[s]; ok {
+		return t.data[s]
+	}
+
+	return 0
+}
+
+func (t *triggerTimeMemory) Update(s string, i int64) {
+	t.data[s] = i
+}
+
+type ruleRegistryMemory struct {
+	data []WipeRule
+}
+
+func (r *ruleRegistryMemory) Store(rules []WipeRule) error {
+	panic("implement me")
+}
+
+func (r *ruleRegistryMemory) Load() ([]WipeRule, error) {
+	panic("implement me")
+}
+
+func (r *ruleRegistryMemory) Update(rule WipeRule) error {
+	panic("implement me")
+}
+
+func (r *ruleRegistryMemory) Insert(rule WipeRule) error {
+	r.data = append(r.data, rule)
+	return nil
+}
+
+func (r *ruleRegistryMemory) List() []WipeRule {
+	return r.data
+}
+
+type triggerLogMemory struct {
+}
+
+func (t *triggerLogMemory) Log(trigger *WipeTrigger) {
+
+}
+
+func (t *triggerLogMemory) Get(start int64, end int64, limit int64) []*WipeTrigger {
+
+	return nil
+}
+
+func NewTestScheduler() *Scheduler {
+
+	return NewScheduler(&triggerTimeMemory{data: make(map[string]int64)}, &triggerLogMemory{}, &ruleRegistryMemory{data: make([]WipeRule, 0)})
+}
+
 func TestNewScheduler(t *testing.T) {
 
 	want := &Scheduler{}
-	got := NewScheduler()
+	got := NewTestScheduler()
 
 	if got == nil {
 		t.Errorf("failed to create new scheduler, got: %v, wanted %v", got, want)
@@ -20,7 +86,7 @@ func TestNewScheduler(t *testing.T) {
 }
 
 func TestRegisterRegistersRules(t *testing.T) {
-	s := NewScheduler()
+	s := NewTestScheduler()
 
 	input := []WipeRule{
 		{Name: "First"},
@@ -40,7 +106,7 @@ func TestRegisterRegistersRules(t *testing.T) {
 }
 
 func TestTriggeringUpdatesLastTriggeredCorrectly(t *testing.T) {
-	s := NewScheduler()
+	s := NewTestScheduler()
 	if err := s.Register(WipeRule{
 		Name:   "test_last_triggered",
 		Days:   fullWeek,
