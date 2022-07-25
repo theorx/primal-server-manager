@@ -25,6 +25,7 @@ timestamp - lastApplied has to be greater than MinDaysSinceLastTrigger is, other
 Also, if the MinDaysSinceLastTrigger is equal to 0, then lastApplied is totally ignored, but still updated.
 */
 func (w *WipeRule) apply(timestamp int64, lastApplied int64) bool {
+
 	//Determine whether the rule is active. If the EndTimestamp is 0, then the rule never expires
 	if w.StartTimestamp >= timestamp || (w.EndTimestamp != 0 && w.EndTimestamp <= timestamp) {
 		return false

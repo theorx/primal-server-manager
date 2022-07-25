@@ -49,6 +49,10 @@ func (s *Scheduler) NextTrigger(input int64, rule *WipeRule) int64 {
 tryApply tries to apply the rule, if successful, then returns wipeTrigger, otherwise nil
 */
 func (s *Scheduler) tryApply(wr *WipeRule, timestamp int64) *WipeTrigger {
+	if len(wr.Name) == 0 {
+		return nil
+	}
+
 	if _, ok := s.triggerTimes[wr.Name]; !ok {
 		s.triggerTimes[wr.Name] = 0
 	}
@@ -57,16 +61,16 @@ func (s *Scheduler) tryApply(wr *WipeRule, timestamp int64) *WipeTrigger {
 		return nil
 	}
 
-	//update timestamp
-	s.triggerTimes[wr.Name] = timestamp
-	//store in log
-
 	//return value
 	trigger := &WipeTrigger{
-		Name:      wr.Name,
-		Timestamp: timestamp,
-		FullWipe:  wr.FullWipe,
+		Name:        wr.Name,
+		Timestamp:   timestamp,
+		FullWipe:    wr.FullWipe,
+		LastTrigger: s.triggerTimes[wr.Name],
 	}
+
+	//update timestamp
+	s.triggerTimes[wr.Name] = timestamp
 
 	s.triggerLog.Log(trigger)
 
