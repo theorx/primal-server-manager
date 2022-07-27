@@ -1,7 +1,6 @@
 package Scheduler
 
 import (
-	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -116,11 +115,11 @@ func TestTriggeringUpdatesLastTriggeredCorrectly(t *testing.T) {
 		t.Fatal("Failed to register wipe rule")
 	}
 
-	firstTime := time.Date(2022, 1, 17, 14, 30, 0, 0, time.Local)
-	secondTime := time.Date(2022, 1, 18, 14, 30, 0, 0, time.Local)
+	firstTime := time.Date(2022, 1, 17, 14, 30, 0, 0, time.UTC)
+	secondTime := time.Date(2022, 1, 18, 14, 30, 0, 0, time.UTC)
 
 	triggers := s.Schedule(firstTime.Unix())
-	log.Println(triggers)
+
 	if len(triggers) != 1 {
 		t.Fatalf("first trigger has failed, expected len of 1, but got: %d", len(triggers))
 	}
@@ -132,7 +131,7 @@ func TestTriggeringUpdatesLastTriggeredCorrectly(t *testing.T) {
 	}
 
 	triggers = s.Schedule(secondTime.Unix())
-	log.Println(triggers)
+
 	if len(triggers) != 1 {
 		t.Fatalf("second trigger has failed, expected len of 1, but got: %d", len(triggers))
 	}
@@ -141,5 +140,132 @@ func TestTriggeringUpdatesLastTriggeredCorrectly(t *testing.T) {
 
 	if trigger2.LastTrigger != firstTime.Unix() {
 		t.Errorf("trigger of firstTime's LastTrigger timestamp is not 0, got %d", trigger2.LastTrigger)
+	}
+}
+
+func TestTryApplyReturnsNilWhenNoNameSpecified(t *testing.T) {
+	s := NewTestScheduler()
+	if got := s.tryApply(&WipeRule{Name: ""}, 0); got != nil {
+		t.Errorf("tryApply expected to return nil with empty Name on the wipe rule, got: %v", got)
+	}
+}
+
+func TestMonthlyForceWipes(t *testing.T) {
+	s := NewTestScheduler()
+
+	//First test with a monthly wipe that is happening only on forced
+	if err := s.Register(WipeRule{
+		Name:                    "Monthly only on forced and on time",
+		Server:                  "",
+		Days:                    nil,
+		Hour:                    0,
+		Minute:                  0,
+		BlueprintWipe:           false,
+		MapWipe:                 false,
+		WipeOnForced:            true,
+		StartTimestamp:          0,
+		EndTimestamp:            0,
+		MinDaysSinceLastTrigger: 0,
+	}); err != nil {
+		t.Fatalf("Failed to register wipe rule, error: %v", err)
+	}
+
+	//Loop over 12 months and detect 12 wipes
+	triggers := make([]*WipeTrigger, 0)
+	for ts := int64(0); ts < 86400*365; ts += 60 {
+		triggers = append(triggers, s.Schedule(ts)...)
+	}
+
+	if len(triggers) != 12 {
+		t.Errorf("Monthly wipes failed, expected 12 but got: %d", len(triggers))
+	}
+
+	//Verify that every single wipe is at the correct hour
+	for _, tr := range triggers {
+		dateTime := time.Unix(tr.Timestamp, 0).UTC()
+
+		if dateTime.Hour() != ForceWipeHourUtc {
+			t.Errorf("wipe hour not correct. Expected, %d, got: %d", ForceWipeHourUtc, dateTime.Hour())
+		}
+
+		if dateTime.Weekday() != time.Thursday {
+			t.Errorf("wipe day not correct. Expected, Thursday, got: %d", dateTime.Weekday())
+		}
+
+		if tr.ForcedUpdate != true {
+			t.Errorf("ForcedUpdate flag expected to be true, but got false")
+		}
+	}
+}
+
+/**
+Bi-weekly schedule to wipe on monday and thursday
+On the weeks when there is forced wipe on thursday, the wipe only has to happen once - when the forced is
+*/
+func TestBiWeeklyWipeScheduleForSameServer(t *testing.T) {
+	s := NewTestScheduler()
+
+	const wipeHour = 14
+
+	//First test with a monthly wipe that is happening only on forced
+	if err := s.Register(WipeRule{
+		Name:                    "monday_wipe",
+		Server:                  "test_server_1",
+		Days:                    []time.Weekday{time.Monday},
+		Hour:                    wipeHour,
+		Minute:                  0,
+		BlueprintWipe:           false,
+		MapWipe:                 true,
+		WipeOnForced:            false,
+		StartTimestamp:          0,
+		EndTimestamp:            0,
+		MinDaysSinceLastTrigger: 0,
+	}); err != nil {
+		t.Fatalf("Failed to register wipe rule, error: %v", err)
+	}
+
+	//First test with a monthly wipe that is happening only on forced
+	if err := s.Register(WipeRule{
+		Name:                    "thursday_wipe",
+		Server:                  "test_server_1",
+		Days:                    []time.Weekday{time.Thursday},
+		Hour:                    wipeHour,
+		Minute:                  0,
+		BlueprintWipe:           true,
+		MapWipe:                 true,
+		WipeOnForced:            true,
+		StartTimestamp:          0,
+		EndTimestamp:            0,
+		MinDaysSinceLastTrigger: 0,
+	}); err != nil {
+		t.Fatalf("Failed to register wipe rule, error: %v", err)
+	}
+
+	triggers := make([]*WipeTrigger, 0)
+
+	for ts := int64(0); ts < 86400*180; ts += 60 {
+		triggers = append(triggers, s.Schedule(ts)...)
+	}
+
+	if len(triggers) != 52 {
+		t.Errorf("Expected 52 wipes, got: %d", len(triggers))
+	}
+
+	for _, tr := range triggers {
+		if hour := time.Unix(tr.Timestamp, 0).UTC().Hour(); hour != wipeHour && tr.ForcedUpdate == false {
+			t.Errorf("Wipe not at %d, got: %d", wipeHour, hour)
+		}
+
+		if hour := time.Unix(tr.Timestamp, 0).UTC().Hour(); hour != ForceWipeHourUtc && tr.ForcedUpdate == true {
+			t.Errorf("Forced Wipe not at %d, got: %d", ForceWipeHourUtc, hour)
+		}
+
+		if (tr.MapWipe != true || tr.BlueprintWipe != true) && time.Unix(tr.Timestamp, 0).UTC().Weekday() == time.Thursday {
+			t.Errorf("Full wipe failed on a thursday, trigger: %v", tr)
+		}
+
+		if (tr.MapWipe != true || tr.BlueprintWipe != false) && time.Unix(tr.Timestamp, 0).UTC().Weekday() == time.Monday {
+			t.Errorf("Map wipe failed on a monday, trigger: %v", tr)
+		}
 	}
 }

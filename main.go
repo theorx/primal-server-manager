@@ -26,7 +26,6 @@ func main() {
 		Days:                    []time.Weekday{time.Monday},
 		Hour:                    0,
 		Minute:                  0,
-		FullWipe:                false,
 		WipeOnForced:            false,
 		StartTimestamp:          0,
 		EndTimestamp:            0,

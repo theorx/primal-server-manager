@@ -12,7 +12,8 @@ type WipeRule struct {
 	Days                    []time.Weekday
 	Hour                    int
 	Minute                  int
-	FullWipe                bool
+	MapWipe                 bool
+	BlueprintWipe           bool
 	WipeOnForced            bool //If WipeOnForced = true, then the rule does not apply at all, and is only triggered when force wipe is detected on that day
 	StartTimestamp          int64
 	EndTimestamp            int64
@@ -36,7 +37,7 @@ func (w *WipeRule) apply(timestamp int64, lastApplied int64) bool {
 	}
 
 	if w.WipeOnForced && w.isForcedUpdate(timestamp) {
-		if time.Unix(timestamp, 0).Hour() == ForceWipeHourUtc && time.Unix(timestamp, 0).Minute() == 0 {
+		if time.Unix(timestamp, 0).UTC().Hour() == ForceWipeHourUtc && time.Unix(timestamp, 0).Minute() == 0 {
 			return true
 		}
 		return false
@@ -69,7 +70,7 @@ func (w *WipeRule) matchWeekday(timestamp int64) bool {
 matchHourAndMinute
 */
 func (w *WipeRule) matchHourAndMinute(timestamp int64) bool {
-	t := time.Unix(timestamp, 0)
+	t := time.Unix(timestamp, 0).UTC()
 
 	if t.Hour() == w.Hour && t.Minute() == w.Minute {
 		return true

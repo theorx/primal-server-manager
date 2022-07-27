@@ -104,7 +104,7 @@ func TestWipeRuleMatchHourAndMinute(t *testing.T) {
 			Hour:   c.Hour,
 			Minute: c.Minute,
 		}).matchHourAndMinute(
-			time.Date(2000, 1, 1, c.Hour, c.Minute, 0, 0, time.Local).Unix(),
+			time.Date(2000, 1, 1, c.Hour, c.Minute, 0, 0, time.UTC).Unix(),
 		) != c.Result {
 			t.Errorf("matchHourAndMinute failed with input: H: %d M: %d", c.Hour, c.Minute)
 		}
@@ -140,7 +140,7 @@ func TestWipeRuleIsForcedWipe(t *testing.T) {
 	}
 
 	for _, c := range tt {
-		if got := (&WipeRule{}).isForcedUpdate(time.Date(2022, time.Month(c.Month), c.Day, 12, 0, 0, 0, time.Local).Unix()); got != c.Result {
+		if got := (&WipeRule{}).isForcedUpdate(time.Date(2022, time.Month(c.Month), c.Day, 12, 0, 0, 0, time.UTC).Unix()); got != c.Result {
 			t.Errorf("isForcedWipe() failed, expected: %v, got: %v, case: %v", c.Result, got, c)
 		}
 	}
@@ -152,11 +152,11 @@ func TestWipeRuleApplyHandlesForcedUpdateOnTime(t *testing.T) {
 		Timestamp int64
 		Result    bool
 	}{
-		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc, 0, 0, 0, time.Local).Unix(), Result: true},
-		{Timestamp: time.Date(2022, 6, 2, ForceWipeHourUtc, 0, 0, 0, time.Local).Unix(), Result: true},
-		{Timestamp: time.Date(2022, 6, 2, 14, 0, 0, 0, time.Local).Unix(), Result: false},
-		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc, 1, 0, 0, time.Local).Unix(), Result: false},
-		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc-1, 59, 0, 0, time.Local).Unix(), Result: false},
+		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc, 0, 0, 0, time.UTC).Unix(), Result: true},
+		{Timestamp: time.Date(2022, 6, 2, ForceWipeHourUtc, 0, 0, 0, time.UTC).Unix(), Result: true},
+		{Timestamp: time.Date(2022, 6, 2, 14, 0, 0, 0, time.UTC).Unix(), Result: false},
+		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc, 1, 0, 0, time.UTC).Unix(), Result: false},
+		{Timestamp: time.Date(2022, 7, 7, ForceWipeHourUtc-1, 59, 0, 0, time.UTC).Unix(), Result: false},
 	}
 
 	for _, c := range tt {
@@ -176,32 +176,32 @@ func TestWipeRuleApplyHandlesMatchWeekDay(t *testing.T) {
 	}{
 		{
 			Days:      []time.Weekday{time.Monday},
-			Timestamp: time.Date(2022, 7, 25, 0, 0, 0, 0, time.Local).Unix(),
+			Timestamp: time.Date(2022, 7, 25, 0, 0, 0, 0, time.UTC).Unix(),
 			Result:    true,
 		},
 		{
 			Days:      []time.Weekday{time.Tuesday},
-			Timestamp: time.Date(2022, 7, 26, 0, 0, 0, 0, time.Local).Unix(),
+			Timestamp: time.Date(2022, 7, 26, 0, 0, 0, 0, time.UTC).Unix(),
 			Result:    true,
 		},
 		{
 			Days:      []time.Weekday{time.Tuesday},
-			Timestamp: time.Date(2022, 7, 26, 0, 45, 0, 0, time.Local).Unix(),
+			Timestamp: time.Date(2022, 7, 26, 0, 45, 0, 0, time.UTC).Unix(),
 			Result:    false,
 		},
 		{
 			Days:      []time.Weekday{time.Tuesday},
-			Timestamp: time.Date(2022, 7, 26, 2, 0, 0, 0, time.Local).Unix(),
+			Timestamp: time.Date(2022, 7, 26, 2, 0, 0, 0, time.UTC).Unix(),
 			Result:    false,
 		},
 		{
 			Days:      []time.Weekday{time.Wednesday},
-			Timestamp: time.Date(2022, 7, 26, 0, 0, 0, 0, time.Local).Unix(),
+			Timestamp: time.Date(2022, 7, 26, 0, 0, 0, 0, time.UTC).Unix(),
 			Result:    false,
 		},
 		{
 			Days:      []time.Weekday{},
-			Timestamp: time.Date(2022, 7, 4, 0, 0, 0, 0, time.Local).Unix(),
+			Timestamp: time.Date(2022, 7, 4, 0, 0, 0, 0, time.UTC).Unix(),
 			Result:    false,
 		},
 	}

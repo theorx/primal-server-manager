@@ -58,10 +58,12 @@ func (s *Scheduler) tryApply(wr *WipeRule, timestamp int64) *WipeTrigger {
 
 	//return value
 	trigger := &WipeTrigger{
-		Name:        wr.Name,
-		Timestamp:   timestamp,
-		FullWipe:    wr.FullWipe,
-		LastTrigger: s.triggerTime.Get(wr.Name),
+		Name:          wr.Name,
+		Timestamp:     timestamp,
+		MapWipe:       wr.MapWipe,
+		BlueprintWipe: wr.BlueprintWipe,
+		ForcedUpdate:  wr.isForcedUpdate(timestamp) && wr.WipeOnForced,
+		LastTrigger:   s.triggerTime.Get(wr.Name),
 	}
 
 	//update timestamp
