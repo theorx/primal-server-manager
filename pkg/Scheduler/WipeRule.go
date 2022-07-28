@@ -32,14 +32,14 @@ func (w *WipeRule) apply(timestamp int64, lastApplied int64) bool {
 		return false
 	}
 
-	if lastApplied+(int64(w.MinDaysSinceLastTrigger)*86400) >= timestamp {
-		return false
-	}
-
 	if w.WipeOnForced && w.isForcedUpdate(timestamp) {
 		if time.Unix(timestamp, 0).UTC().Hour() == ForceWipeHourUtc && time.Unix(timestamp, 0).Minute() == 0 {
 			return true
 		}
+		return false
+	}
+
+	if lastApplied+(int64(w.MinDaysSinceLastTrigger)*86400) >= timestamp {
 		return false
 	}
 

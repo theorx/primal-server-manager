@@ -1,5 +1,7 @@
 package Scheduler
 
+import "math"
+
 /*
 Scheduler holds all the wipe rules
 */
@@ -40,6 +42,12 @@ NextTrigger predicts the timestamp for the next future trigger for a given rule
 Input is the int64 unix timestamp of the current time
 */
 func (s *Scheduler) NextTrigger(input int64, rule *WipeRule) int64 {
+	lastApplied := s.triggerTime.Get(rule.Name)
+	for ; input < math.MaxInt64-60; input += 60 {
+		if rule.apply(input, lastApplied) {
+			return input
+		}
+	}
 
 	return 0
 }

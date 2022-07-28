@@ -269,3 +269,83 @@ func TestBiWeeklyWipeScheduleForSameServer(t *testing.T) {
 		}
 	}
 }
+
+func TestEveryTwoWeekWipeSchedule(t *testing.T) {
+	s := NewTestScheduler()
+
+	//First test with a monthly wipe that is happening only on forced
+	if err := s.Register(WipeRule{
+		Name:                    "two_week_wipe_cycle_thursdays",
+		Server:                  "test_server_1",
+		Days:                    []time.Weekday{time.Thursday},
+		Hour:                    17,
+		Minute:                  30,
+		BlueprintWipe:           true,
+		MapWipe:                 true,
+		WipeOnForced:            true,
+		StartTimestamp:          0,
+		EndTimestamp:            0,
+		MinDaysSinceLastTrigger: 13,
+	}); err != nil {
+		t.Fatalf("Failed to register wipe rule, error: %v", err)
+	}
+
+	triggers := make([]*WipeTrigger, 0)
+	start, err := time.Parse("02-01-2006", "14-01-2021")
+
+	if err != nil {
+		t.Errorf("Failed to parse time, error: %v", err)
+	}
+
+	end := start.Unix() + (86400 * 180)
+
+	for ts := start.Unix(); ts < end; ts += 60 {
+		triggers = append(triggers, s.Schedule(ts)...)
+	}
+
+	forcedWipes := 0
+	regularWipes := 0
+
+	for _, tr := range triggers {
+		if tr.ForcedUpdate {
+			forcedWipes++
+			continue
+		}
+		regularWipes++
+	}
+
+	if forcedWipes != 6 {
+		t.Errorf("Expected to have 6 forced wipes, got: %d", forcedWipes)
+	}
+
+	if regularWipes != 8 {
+		t.Errorf("Expected to have 8 regular wipes got: %d", regularWipes)
+	}
+
+}
+
+func TestSchedulerNextTrigger(t *testing.T) {
+	s := NewTestScheduler()
+	rule := &WipeRule{
+		Name:                    "test-trigger-rule",
+		Server:                  "test",
+		Days:                    []time.Weekday{time.Monday},
+		Hour:                    14,
+		Minute:                  30,
+		MapWipe:                 false,
+		BlueprintWipe:           false,
+		WipeOnForced:            true,
+		MinDaysSinceLastTrigger: 6,
+	}
+
+	if err := s.Register(*rule); err != nil {
+		t.Fatalf("failed to register rule, error: %v", err)
+	}
+
+	mondayTS := time.Date(2022, 01, 03, 14, 30, 0, 0, time.UTC).Unix()
+
+	s.Schedule(mondayTS)
+	if got := s.NextTrigger(mondayTS, rule); got != 1641492000 {
+		t.Errorf("NextTrigger result not correct. expected: %d, got: %d", 1641492000, got)
+	}
+}

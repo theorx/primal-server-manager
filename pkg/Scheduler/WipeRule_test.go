@@ -212,3 +212,20 @@ func TestWipeRuleApplyHandlesMatchWeekDay(t *testing.T) {
 		}
 	}
 }
+
+func TestWipeRuleApplyTriggersForcedWipeDuringTriggerTimeout(t *testing.T) {
+	wr := &WipeRule{Name: "Testing rule", WipeOnForced: true, MinDaysSinceLastTrigger: 720}
+
+	triggers := 0
+
+	for ts := int64(0); ts < 86400*365; ts += 60 {
+		if wr.apply(ts, 0) {
+			triggers++
+		}
+	}
+
+	if triggers != 12 {
+		t.Errorf("Expected to have 12 triggers, but got: %d", triggers)
+	}
+
+}
