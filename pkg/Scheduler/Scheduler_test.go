@@ -1,6 +1,7 @@
 package Scheduler
 
 import (
+	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -347,5 +348,11 @@ func TestSchedulerNextTrigger(t *testing.T) {
 	s.Schedule(mondayTS)
 	if got := s.NextTrigger(mondayTS, rule); got != 1641492000 {
 		t.Errorf("NextTrigger result not correct. expected: %d, got: %d", 1641492000, got)
+	}
+}
+
+func TestSchedulerNextTriggerReturnsZero(t *testing.T) {
+	if got := NewTestScheduler().NextTrigger(math.MaxInt64-30, &WipeRule{}); got != 0 {
+		t.Errorf("NextTrigger expected to return 0, got: %d", got)
 	}
 }
